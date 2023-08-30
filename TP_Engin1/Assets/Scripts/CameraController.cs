@@ -16,6 +16,7 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float m_desiredDuration = 5.0f;
     private Vector3 targetPos;
     private float lerpedAngleX = 0.0f;
+    private float lerpedAngleY = 0.0f;
 
     [SerializeField] private Vector2 m_clampingXRotationValues = Vector2.zero;
     [SerializeField] private Vector2 m_clampingCameraDistance = Vector2.zero;
@@ -24,19 +25,35 @@ public class CameraController : MonoBehaviour
     private void Awake()
     {
         targetPos = transform.position;
+    }   
+    
+    private void FixedUpdate()
+    {
+        MoveCameraInFrontOfObstructionsFUpdate();
     }
+
+    void Update()
+    {
+
+        //UpdateHorizontalMovement();
+        //UpdateVerticalMovement();
+        //UpdateCameraDistance();
+        LerpedCameraZ();
+    }
+
+
     private void UpdateHorizontalMovement()
     {
         //Version réactive
-        float currentAngleX = Input.GetAxis("Mouse X") * m_rotationSpeed;
-        transform.RotateAround(m_objectToLookAt.position, m_objectToLookAt.up, currentAngleX);
+        //float currentAngleX = Input.GetAxis("Mouse X") * m_rotationSpeed;
+        //transform.RotateAround(m_objectToLookAt.position, m_objectToLookAt.up, currentAngleX);
 
 
         //Version lerped
-        //float currentAngleX = Input.GetAxis("Mouse X") * m_rotationSpeed;
-        //lerpedAngleX = Mathf.Lerp(lerpedAngleX, currentAngleX, 0.1f);
-        //
-        //transform.RotateAround(m_objectToLookAt.position, m_objectToLookAt.up, lerpedAngleX);
+        float currentAngleX = Input.GetAxis("Mouse X") * m_rotationSpeed;
+        lerpedAngleX = Mathf.Lerp(lerpedAngleX, currentAngleX, 0.1f);
+        
+        transform.RotateAround(m_objectToLookAt.position, m_objectToLookAt.up, lerpedAngleX);
     }
 
     private void UpdateVerticalMovement()
@@ -62,7 +79,10 @@ public class CameraController : MonoBehaviour
             return;
         }
 
-        transform.RotateAround(m_objectToLookAt.position, transform.right, currentAngleY);
+        //Version lerped    //changer rotateAround aussi
+        lerpedAngleY = Mathf.Lerp(lerpedAngleY, currentAngleY, 0.1f); 
+
+        transform.RotateAround(m_objectToLookAt.position, transform.right, lerpedAngleY);
     }
 
     private void UpdateCameraDistance()
@@ -96,14 +116,34 @@ public class CameraController : MonoBehaviour
 
 
         transform.position = Vector3.Lerp(transform.position, targetPos, percentageComplete);
+
+        //Marche pas avec les autres lerp 
+        //Faudrait soit pouvoir utiliser translate
+        //isoler Z et mathf.lerp comme les 2 autres
+        ////////
+        ///ou bien faire transform.position = Vector3.Lerp partout
+        //
     }
 
-    void Update()
+    private void MoveCameraInFrontOfObstructionsFUpdate()
     {
+        int layerMask = 1 << 8;
+        RaycastHit hit;
 
-        UpdateHorizontalMovement();
-        UpdateVerticalMovement();
-        UpdateCameraDistance();
-        //LerpedCameraZ();
+        Vector3 vDiff = transform.position - m_objectToLookAt.position;
+        float distance = vDiff.magnitude;
+
+        if (Physics.Raycast(m_objectToLookAt.position, vDiff, out hit, distance, layerMask))
+        {
+            //Objet détecté
+            Debug.DrawRay(m_objectToLookAt.position, vDiff.normalized * hit.distance, Color.yellow);
+
+            transform.SetPositionAndRotation(hit.point, transform.rotation);
+        }
+        else
+        {
+            //Objet non détecté
+            Debug.DrawRay(m_objectToLookAt.position, vDiff, Color.white);
+        }
     }
 }
