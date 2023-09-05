@@ -1,48 +1,60 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
-    //Vector2 m_currentPosAroundObject = Vector2.zero;
-    //float m_currentAngle = -270.0f;
-
     [SerializeField] private Transform m_objectToLookAt;
-    [SerializeField] private float m_rotationSpeed = 0.0f;
-    [SerializeField] private float m_scrollSpeed = 0.0f;
-    [SerializeField] private float m_smoothSpeed = 0.0f;
+    [SerializeField] private Vector3 m_offset;
+    private Vector3 m_targetPosition;
+    [SerializeField] private float m_startDistance = 5.0f;
+    private float m_targetDistance;
+    private float m_lerpedDistance;
+    [SerializeField] private float m_scrollSpeed = 0.5f;
+    [SerializeField] private float m_lerpF = 0.1f;
+    [SerializeField] private float m_rotationSpeed = 5.0f;
+    private float m_lerpedAngleX;
+    private float m_lerpedAngleY;
+    [SerializeField] private Vector2 m_clampingXRotationValues;
 
-    //private float m_elapsedTime = 0.0f;
-    [SerializeField] private float m_desiredDuration = 5.0f;
-    private Vector3 targetPos;
-    private float lerpedAngleX = 0.0f;
-    private float lerpedAngleY = 0.0f;
 
-    [SerializeField] private Vector2 m_clampingXRotationValues = Vector2.zero;
-    [SerializeField] private Vector2 m_clampingCameraDistance = Vector2.zero;
-    //[SerializeField] private Vector3 m_cameraOffset = Vector3.zero;
 
-    private void Awake()
+    // Start is called before the first frame update
+    void Start()
     {
-        targetPos = transform.position;
-    }   
-    
+        transform.position = m_objectToLookAt.position + m_offset;
+        m_targetDistance = m_startDistance;
+    }
+
     private void FixedUpdate()
     {
+        CalculateDistance();
+        CalculateTargetPosition();
+
+        RotateAroundObjectHorizontal();
+        RotateAroundObjectVertical();
+
+
+        transform.position = Vector3.Lerp(transform.position, m_targetPosition, m_lerpF);
+
         MoveCameraInFrontOfObstructionsFUpdate();
     }
 
-    void Update()
+    void CalculateDistance()
     {
-
-        //UpdateHorizontalMovement();
-        //UpdateVerticalMovement();
-        //UpdateCameraDistance();
-        LerpedCameraZ();
+        float mouseInput = Input.mouseScrollDelta.y * m_scrollSpeed;
+        m_targetDistance += mouseInput;
+        m_lerpedDistance = Mathf.Lerp(m_lerpedDistance, m_targetDistance, m_lerpF);
     }
 
+    void CalculateTargetPosition()
+    {
+        Vector3 CameraForwardVec = transform.forward;
+        CameraForwardVec.Normalize();
+        Vector3 desiredCameraOffset = CameraForwardVec * m_lerpedDistance;
 
-    private void UpdateHorizontalMovement()
+        m_targetPosition = m_objectToLookAt.position - desiredCameraOffset;
+    }
+
+    void RotateAroundObjectHorizontal()
     {
         //Version réactive
         //float currentAngleX = Input.GetAxis("Mouse X") * m_rotationSpeed;
@@ -51,12 +63,12 @@ public class CameraController : MonoBehaviour
 
         //Version lerped
         float currentAngleX = Input.GetAxis("Mouse X") * m_rotationSpeed;
-        lerpedAngleX = Mathf.Lerp(lerpedAngleX, currentAngleX, 0.1f);
-        
-        transform.RotateAround(m_objectToLookAt.position, m_objectToLookAt.up, lerpedAngleX);
+        m_lerpedAngleX = Mathf.Lerp(m_lerpedAngleX, currentAngleX, m_lerpF);
+
+        transform.RotateAround(m_objectToLookAt.position, m_objectToLookAt.up, m_lerpedAngleX);
     }
 
-    private void UpdateVerticalMovement()
+    void RotateAroundObjectVertical()
     {
         //Différence de l'angle à chaque frame
         float currentAngleY = Input.GetAxis("Mouse Y") * m_rotationSpeed;
@@ -65,7 +77,6 @@ public class CameraController : MonoBehaviour
         //Résultat de ma rotation + différence
         float comparisonAngle = xRotationValue + currentAngleY;
 
-        //Debug.Log(comparisonAngle);
         //S'assure que l'angle n'est pas converti à 360 lorsqu'il atteint 0 (0 étant à l'horizontal)
         //Permet d'avoir une limite du bas en valeur négative
         if (comparisonAngle > 180)
@@ -79,53 +90,18 @@ public class CameraController : MonoBehaviour
             return;
         }
 
-        //Version lerped    //changer rotateAround aussi
-        lerpedAngleY = Mathf.Lerp(lerpedAngleY, currentAngleY, 0.1f); 
+        //Version lerped   
+        m_lerpedAngleY = Mathf.Lerp(m_lerpedAngleY, currentAngleY, m_lerpF);
 
-        transform.RotateAround(m_objectToLookAt.position, transform.right, lerpedAngleY);
-    }
-
-    private void UpdateCameraDistance()
-    {
-
-        float mouseScrollInput = Input.mouseScrollDelta.y * m_scrollSpeed;
-        Vector3 cameraDistanceFromPlayer = new Vector3(0, 0, mouseScrollInput);
-
-        //Pour clamper
-        //calculer distance entre camera et joueur avec Vector3.distance
-        float distanceCameraPlayer = Vector3.Distance(transform.position, m_objectToLookAt.position);
-        //Debug.Log(distanceCameraPlayer);
-        if ((mouseScrollInput > 0 && distanceCameraPlayer < m_clampingCameraDistance.x) ||
-            (mouseScrollInput < 0 && distanceCameraPlayer > m_clampingCameraDistance.y))
+        //À vérifier aulieu du early return
+        if (comparisonAngle > m_clampingXRotationValues.x && comparisonAngle < m_clampingXRotationValues.y)
         {
-            return;
+            transform.RotateAround(m_objectToLookAt.position, transform.right, m_lerpedAngleY);
         }
-        transform.Translate(cameraDistanceFromPlayer);
+
 
     }
-
-    private void LerpedCameraZ()
-    {
-        float m_elapsedTime = 0.0f;
-
-        float mouseScrollInput = Input.mouseScrollDelta.y * m_scrollSpeed;
-        targetPos += new Vector3(0, 0, mouseScrollInput);
-
-        m_elapsedTime += Time.deltaTime;
-        float percentageComplete = m_elapsedTime / m_desiredDuration;
-
-
-        transform.position = Vector3.Lerp(transform.position, targetPos, percentageComplete);
-
-        //Marche pas avec les autres lerp 
-        //Faudrait soit pouvoir utiliser translate
-        //isoler Z et mathf.lerp comme les 2 autres
-        ////////
-        ///ou bien faire transform.position = Vector3.Lerp partout
-        //
-    }
-
-    private void MoveCameraInFrontOfObstructionsFUpdate()
+    void MoveCameraInFrontOfObstructionsFUpdate()
     {
         int layerMask = 1 << 8;
         RaycastHit hit;
@@ -146,4 +122,5 @@ public class CameraController : MonoBehaviour
             Debug.DrawRay(m_objectToLookAt.position, vDiff, Color.white);
         }
     }
+
 }
