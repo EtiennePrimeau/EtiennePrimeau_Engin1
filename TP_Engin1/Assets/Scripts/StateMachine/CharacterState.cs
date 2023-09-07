@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CharacterState : IState
+public abstract class CharacterState : IState
 {
 
     protected CharacterController m_stateMachine;
@@ -25,6 +25,15 @@ public class CharacterState : IState
 
     public virtual void OnExit()
     {
+    }
+
+    public virtual bool CanEnter()
+    {
+        return true;
+    }
+    public virtual bool CanExit()
+    {
+        return true;
     }
 
 }

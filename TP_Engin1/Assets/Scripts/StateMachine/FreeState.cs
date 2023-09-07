@@ -7,6 +7,7 @@ public class FreeState : CharacterState
 
     public override void OnEnter()
     {
+        Debug.Log("Entering FreeState");
     }
 
     public override void OnFixedUpdate()
@@ -89,5 +90,16 @@ public class FreeState : CharacterState
 
     public override void OnExit()
     {
+        Debug.Log("Exiting FreeState");
     }
+
+    public override bool CanEnter()
+    {
+        return m_stateMachine.IsInContactWithFloor();
+    }
+    public override bool CanExit()
+    {
+        return true;
+    }
+
 }
