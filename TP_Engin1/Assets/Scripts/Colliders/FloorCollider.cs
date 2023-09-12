@@ -8,14 +8,14 @@ public class FloorCollider : MonoBehaviour
     {
         if (!IsGrounded)
         {
-            Debug.Log("Touching ground");
+            //Debug.Log("Touching ground");
         }
         IsGrounded = true;
     }
 
     private void OnTriggerExit(Collider other)
     {
-        Debug.Log("Leaving ground");
+        //Debug.Log("Leaving ground");
         IsGrounded = false;
     }
 }

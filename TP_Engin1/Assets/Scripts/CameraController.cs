@@ -14,6 +14,7 @@ public class CameraController : MonoBehaviour
     private float m_lerpedAngleX;
     private float m_lerpedAngleY;
     [SerializeField] private Vector2 m_clampingXRotationValues;
+    [SerializeField] private Vector2 m_clampingCameraDistance;
 
 
 
@@ -37,11 +38,16 @@ public class CameraController : MonoBehaviour
 
         MoveCameraInFrontOfObstructionsFUpdate();
     }
-
     void CalculateDistance()
     {
         float mouseInput = Input.mouseScrollDelta.y * m_scrollSpeed;
-        m_targetDistance += mouseInput;
+        
+        if ((mouseInput < 0 && m_targetDistance > m_clampingCameraDistance.x) ||
+            (mouseInput > 0 && m_targetDistance < m_clampingCameraDistance.y))
+        {
+            m_targetDistance += mouseInput;
+        }
+
         m_lerpedDistance = Mathf.Lerp(m_lerpedDistance, m_targetDistance, m_lerpF);
     }
 
